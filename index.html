@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Energy Attestation — SZL Holdings</title>
+<meta name="description" content="Honest holographic energy-attestation posture for the SZL sovereign mesh. Shows RED when there are no live NVML meters — the no-live-meters state is the honest launch state. GB grid carbon intensity is REPORTED pass-through."/>
+<!-- 0 runtime CDN. No external libraries, no web fonts — system fonts only, a single
+     self-contained vanilla-JS 2D canvas for the holographic lattice backdrop.
+
+     Doctrine v11 (binding): every value on this page is either
+       MEASURED     — this browser saw a real HTTP result (e.g. a meter is reachable), or
+       REPORTED     — a pass-through of an upstream self-report (a11oy's own /govern/health,
+                      the National Grid ESO Carbon Intensity API), or
+       UNAVAILABLE  — the source was unreachable / the capability is honestly absent.
+     Nothing here is ever fabricated. The sovereign mesh currently reports NO live energy
+     meters (Cloudflare tunnels down, boxes off) — this page renders that truthfully in RED.
+     An attestation page that goes RED when the meters are dead is the honesty flex, not a bug.
+     Λ = Conjecture 1 (advisory, never proven). Energy is null unless a real NVML meter reports. -->
+<style>
+ :root{
+   --void:#05070d;--panel:#0b121b;--panel2:#0a1119;--line:#1b2734;--line2:#14202b;
+   --proof:#3af4c8;--teal:#39d3c4;--lattice:#5b8dee;--gold:#d7b96b;
+   --cream:#eef3f6;--para:#9fb1bf;--dim:#6d7d8a;
+   --green:#2fd07a;--red:#ff5470;--amber:#e8b34a;
+ }
+ *{box-sizing:border-box}
+ html,body{margin:0;height:100%}
+ body{background:var(--void);color:var(--cream);
+   font:14px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
+   min-height:100vh;min-height:100dvh;position:relative;overflow-x:hidden}
+ /* holographic lattice backdrop */
+ #bg{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%}
+ .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 16px 48px}
+ a{color:var(--proof);text-decoration:none}
+ a:hover{text-decoration:underline}
+ header{padding:20px 0 14px;border-bottom:1px solid var(--line);
+   display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+ h1{font-size:19px;margin:0;letter-spacing:.4px;font-weight:650}
+ h1 .glyph{color:var(--proof)}
+ .sub{color:var(--para);font-size:12px;flex-basis:100%;margin-top:2px;line-height:1.5}
+ .badges{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 0}
+ .badge{display:inline-block;font:10.5px ui-monospace,SFMono-Regular,Menlo,monospace;
+   padding:3px 8px;border-radius:6px;border:1px solid var(--line);color:var(--gold);
+   background:#10171f;white-space:nowrap}
+ .badge.proof{color:var(--proof);border-color:#1d3b39}
+ .badge.lat{color:var(--lattice);border-color:#22314d}
+
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+ @media (max-width:760px){.grid{grid-template-columns:1fr}}
+ .card{background:linear-gradient(180deg,var(--panel),var(--panel2));
+   border:1px solid var(--line);border-radius:13px;padding:16px 16px 14px;
+   -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+ .card.wide{grid-column:1/-1}
+ .card h2{font-size:13px;margin:0 0 3px;letter-spacing:.4px;font-weight:640;
+   display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+ .card .cap{color:var(--dim);font-size:11px;margin:0 0 12px;line-height:1.5}
+
+ /* honest label chips */
+ .chip{font:9.5px ui-monospace,monospace;padding:2px 7px;border-radius:20px;
+   border:1px solid currentColor;letter-spacing:.5px;white-space:nowrap}
+ .chip.measured{color:var(--proof)}
+ .chip.reported{color:var(--lattice)}
+ .chip.unavail{color:var(--red)}
+ .chip.na{color:var(--dim)}
+
+ /* big verdict banner */
+ .verdict{border-radius:11px;padding:13px 15px;margin:2px 0 14px;
+   border:1px solid var(--line);background:#0a1017;display:flex;gap:12px;align-items:flex-start}
+ .verdict .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;margin-top:4px;
+   box-shadow:0 0 10px currentColor}
+ .verdict .vt{font:600 14px ui-sans-serif,system-ui;letter-spacing:.3px;margin:0 0 3px}
+ .verdict .vs{color:var(--para);font-size:11.5px;line-height:1.55;font-family:ui-monospace,monospace}
+ .verdict.down{border-color:#48222c;background:linear-gradient(180deg,#160a0e,#0a0709)}
+ .verdict.down .dot{color:var(--red);background:var(--red)}
+ .verdict.down .vt{color:#ff8496}
+ .verdict.up{border-color:#1c3a2b}
+ .verdict.up .dot{color:var(--green);background:var(--green)}
+ .verdict.up .vt{color:#5fe3a0}
+ .verdict.wait .dot{color:var(--amber);background:var(--amber)}
+ .verdict.wait .vt{color:var(--amber)}
+
+ .rows{display:flex;flex-direction:column;gap:0}
+ .r{display:flex;align-items:center;gap:10px;justify-content:space-between;
+   padding:9px 2px;border-top:1px solid var(--line2)}
+ .r:first-child{border-top:0}
+ .r .nm{display:flex;align-items:center;gap:9px;min-width:0}
+ .r .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 7px currentColor}
+ .dot.on{color:var(--green);background:var(--green)}
+ .dot.off{color:var(--red);background:var(--red)}
+ .dot.muted{color:var(--dim);background:var(--dim);box-shadow:none}
+ .r .txt{min-width:0}
+ .r .t1{color:var(--cream);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .r .t2{color:var(--dim);font:10.5px ui-monospace,monospace;overflow:hidden;
+   text-overflow:ellipsis;white-space:nowrap}
+ .r .rt{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+ .r .val{font:11.5px ui-monospace,monospace;color:var(--cream)}
+
+ /* big stat */
+ .stat{display:flex;align-items:baseline;gap:8px;margin:2px 0 4px}
+ .stat .big{font:600 30px ui-monospace,monospace;letter-spacing:-.5px}
+ .stat .big.red{color:var(--red)}
+ .stat .big.green{color:var(--green)}
+ .stat .big.teal{color:var(--proof)}
+ .stat .unit{color:var(--para);font-size:12px}
+
+ /* generation-mix bars */
+ .mix{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+ .mix .m{display:grid;grid-template-columns:74px 1fr 46px;align-items:center;gap:9px}
+ .mix .ml{color:var(--para);font:11px ui-monospace,monospace;text-transform:capitalize}
+ .mix .bar{height:9px;border-radius:5px;background:#0f1922;overflow:hidden}
+ .mix .fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--lattice),var(--proof))}
+ .mix .mv{color:var(--cream);font:11px ui-monospace,monospace;text-align:right}
+ .mix .m.zero .fill{background:#1b2734}
+ .mix .m.zero .mv{color:var(--dim)}
+
+ .meta{color:var(--dim);font:10.5px ui-monospace,monospace;margin-top:12px;
+   border-top:1px solid var(--line2);padding-top:9px;display:flex;
+   justify-content:space-between;gap:10px;flex-wrap:wrap}
+ .btn{font:11px ui-monospace,monospace;padding:5px 11px;border-radius:7px;
+   border:1px solid var(--proof);background:#08140f;color:var(--proof);cursor:pointer}
+ .btn:hover{background:#0c1d15}
+ .loading{color:var(--dim);font:11px ui-monospace,monospace;padding:14px 2px}
+
+ footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+   color:var(--para);font:10.5px/1.7 ui-monospace,monospace}
+ footer .doct{color:var(--dim)}
+ @media (prefers-reduced-motion:reduce){#bg{opacity:.5}}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+ <header>
+  <h1><span class="glyph">◇</span> Energy Attestation</h1>
+  <span style="color:var(--para);font-size:12px">SZL Holdings · sovereign mesh</span>
+  <p class="sub">Honest energy-attestation posture for the governed inference mesh. There are
+   <b>no live NVML energy meters right now</b> — the mesh is powered down — so this page
+   attests <b>UNAVAILABLE in RED</b>. That is the point: an attestation surface that never fakes
+   a green joule. GB grid carbon intensity is shown as <b>REPORTED</b> context. Nothing is fabricated.</p>
+  <div class="badges">
+   <span class="badge proof">0 runtime CDN</span>
+   <span class="badge">Λ = Conjecture 1 · never green</span>
+   <span class="badge lat">energy null unless real NVML</span>
+   <a class="badge" href="https://a-11-oy.com" title="The flagship a11oy governed-inference platform">a11oy →</a>
+   <a class="badge" href="https://a-11-oy.com/holographic" title="The full holographic estate">◇ estate →</a>
+  </div>
+ </header>
+
+ <div class="grid">
+
+  <div class="card wide" id="mesh-card">
+   <h2>Sovereign mesh energy meters
+    <span class="chip measured" title="MEASURED = this browser saw the real HTTP result of the meter probes">MEASURED probe</span>
+    <span class="chip reported" title="REPORTED = pass-through of a11oy's own /govern/health self-report">REPORTED mesh</span>
+   </h2>
+   <p class="cap">Live read of <a href="https://szlholdings-a11oy.hf.space/api/a11oy/v1/govern/health" target="_blank" rel="noopener">a11oy <code>/govern/health</code></a>.
+    A meter is attesting only when its NVML endpoint is reachable AND fresh. Cloudflare tunnel
+    <code>530</code> = the box is off / no connector → UNAVAILABLE, never a fabricated joule.</p>
+   <div id="mesh-body"><div class="loading">probing sovereign mesh…</div></div>
+  </div>
+
+  <div class="card" id="grid-card">
+   <h2>GB grid carbon intensity
+    <span class="chip reported" title="REPORTED = pass-through of the National Grid ESO Carbon Intensity API">REPORTED</span>
+   </h2>
+   <p class="cap">Pass-through of the keyless <a href="https://carbonintensity.org.uk" target="_blank" rel="noopener">National Grid ESO Carbon Intensity API</a>.
+    Grid-context only — this is the carbon cost of drawing from the GB grid, not a meter reading of our own compute.</p>
+   <div id="grid-body"><div class="loading">fetching grid carbon intensity…</div></div>
+  </div>
+
+  <div class="card" id="mix-card">
+   <h2>GB generation mix
+    <span class="chip reported" title="REPORTED = pass-through of the National Grid ESO Carbon Intensity API">REPORTED</span>
+   </h2>
+   <p class="cap">Half-hourly fuel mix behind that intensity figure. The greener this mix, the lower
+    the carbon cost of any future live compute drawn from the GB grid.</p>
+   <div id="mix-body"><div class="loading">fetching generation mix…</div></div>
+  </div>
+
+ </div>
+
+ <footer>
+  <div class="doct">Doctrine v11 · Λ = Conjecture 1 (advisory, never proven, trust ceiling 0.97) ·
+   MEASURED = this browser's own HTTP result · REPORTED = upstream self-report pass-through ·
+   UNAVAILABLE = source unreachable or capability honestly absent · 0 runtime CDN · energy is null unless a real NVML meter reports.</div>
+  <div style="margin-top:6px">
+   SZL Holdings · <a href="https://a-11-oy.com">a-11-oy.com</a> ·
+   <a href="https://github.com/szl-holdings/energy-attest-holo">source</a> ·
+   <a href="https://github.com/szl-holdings/szl-energy-attest">szl-energy-attest</a> ·
+   <a href="https://huggingface.co/SZLHOLDINGS">🤗 SZLHOLDINGS</a>
+  </div>
+ </footer>
+</div>
+
+<script>
+"use strict";
+(function(){
+ var A11OY = "https://szlholdings-a11oy.hf.space/api/a11oy/v1/govern/health";
+ var CI = "https://api.carbonintensity.org.uk/intensity";
+ var GEN = "https://api.carbonintensity.org.uk/generation";
+
+ function el(tag, cls, txt){var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e;}
+ function esc(s){return String(s==null?"":s);}
+ function nowLabel(){return new Date().toLocaleString(undefined,{hour12:false});}
+
+ function jget(url, timeoutMs){
+   timeoutMs = timeoutMs||12000;
+   var ctrl = ("AbortController" in window) ? new AbortController() : null;
+   var t = ctrl ? setTimeout(function(){ctrl.abort();}, timeoutMs) : null;
+   var opts = {headers:{accept:"application/json"}, cache:"no-store"};
+   if(ctrl) opts.signal = ctrl.signal;
+   return fetch(url, opts).then(function(r){
+     if(t) clearTimeout(t);
+     if(!r.ok) return {ok:false, status:r.status};
+     return r.json().then(function(d){return {ok:true, status:r.status, data:d};});
+   }).catch(function(e){ if(t) clearTimeout(t); return {ok:false, error:(e&&e.message)||String(e)}; });
+ }
+
+ // ---- Sovereign mesh -------------------------------------------------------
+ function renderMesh(res){
+   var host = document.getElementById("mesh-body");
+   host.innerHTML = "";
+
+   if(!res.ok){
+     var v = el("div","verdict down");
+     v.appendChild(el("div","dot"));
+     var b = el("div"); b.appendChild(el("div","vt","ENERGY ATTESTATION SOURCE UNREACHABLE"));
+     b.appendChild(el("div","vs","UNAVAILABLE — could not read a11oy /govern/health ("+
+       esc(res.error||("HTTP "+res.status))+"). No fabricated status shown."));
+     v.appendChild(b); host.appendChild(v);
+     host.appendChild(metaRow(host, "source: a11oy /govern/health · UNAVAILABLE"));
+     return;
+   }
+   var d = res.data||{};
+   var engines = d.mesh||[];
+   var live = (typeof d.engines_live==="number")?d.engines_live:0;
+   var total = (typeof d.engines_total==="number")?d.engines_total:engines.length;
+   var meterFresh = d.meter_fresh_live === true;
+   var meters = (d.meter_evidence && d.meter_evidence.engines) || [];
+   var metersReachable = meters.filter(function(m){return m.reachable;}).length;
+
+   // verdict
+   var v, vt, vs, cls;
+   if(meterFresh && metersReachable>0){
+     cls="up"; vt="LIVE ENERGY METERS ATTESTING";
+     vs=metersReachable+" of "+meters.length+" NVML meters reachable & fresh — joules are MEASURED downstream.";
+   } else {
+     cls="down"; vt="NO LIVE ENERGY METERS — ATTESTATION UNAVAILABLE";
+     vs="0 of "+(meters.length||total)+" NVML meters reachable/fresh. The honest launch state: "+
+        "mesh powered down (Cloudflare tunnels 530). No joule is fabricated to fill the gap.";
+   }
+   v = el("div","verdict "+cls);
+   v.appendChild(el("div","dot"));
+   var vb = el("div"); vb.appendChild(el("div","vt",vt)); vb.appendChild(el("div","vs",vs));
+   v.appendChild(vb); host.appendChild(v);
+
+   // engines live stat + meters fresh chip
+   var stat = el("div","stat");
+   var big = el("span","big "+(live>0?"green":"red"), live+"/"+total);
+   stat.appendChild(big);
+   stat.appendChild(el("span","unit","governed engines live"));
+   host.appendChild(stat);
+
+   // engine rows
+   var rows = el("div","rows");
+   engines.forEach(function(en){
+     var r = el("div","r");
+     var nm = el("div","nm");
+     nm.appendChild(el("span","dot "+(en.live?"on":"off")));
+     var tx = el("div","txt");
+     tx.appendChild(el("div","t1", esc(en.name)));
+     tx.appendChild(el("div","t2", esc(en.model)+" · tier "+esc(en.tier)+" · "+esc(en.effort)));
+     nm.appendChild(tx); r.appendChild(nm);
+     var rt = el("div","rt");
+     rt.appendChild(el("span","chip "+(en.live?"measured":"unavail"), en.live?"LIVE":"DOWN"));
+     r.appendChild(rt); rows.appendChild(r);
+   });
+   host.appendChild(rows);
+
+   // meter evidence
+   host.appendChild(el("div","cap","NVML meter evidence (energy source of truth):"));
+   var mrows = el("div","rows");
+   if(!meters.length){
+     mrows.appendChild(rowSimple("no meter evidence reported","UNAVAILABLE","unavail","muted"));
+   }
+   meters.forEach(function(m){
+     var r = el("div","r");
+     var nm = el("div","nm");
+     nm.appendChild(el("span","dot "+(m.reachable?"on":"off")));
+     var tx = el("div","txt");
+     tx.appendChild(el("div","t1", esc(m.meter)));
+     tx.appendChild(el("div","t2", esc(m.engine)));
+     nm.appendChild(tx); r.appendChild(nm);
+     var rt = el("div","rt");
+     if(!m.reachable) rt.appendChild(el("span","val", esc(m.note||"")));
+     rt.appendChild(el("span","chip "+(m.reachable?"measured":"unavail"), m.reachable?"REACHABLE":"UNAVAILABLE"));
+     r.appendChild(rt); mrows.appendChild(r);
+   });
+   host.appendChild(mrows);
+
+   // GLM note if present
+   if(d.glm){
+     host.appendChild(el("div","cap","GLM engine: "+esc(d.glm.model_tag)+" — "+
+       (d.glm.on_metal_live?"on-metal LIVE":"on-metal DOWN")+". "+esc(d.glm.note||"")));
+   }
+   if(d.honesty){
+     host.appendChild(el("div","cap","a11oy honesty note: "+esc(d.honesty)));
+   }
+   host.appendChild(metaRow(host, "source: a11oy /govern/health · REPORTED self-report + MEASURED probe"));
+ }
+
+ function rowSimple(t1, chipTxt, chipCls, dotCls){
+   var r = el("div","r");
+   var nm = el("div","nm");
+   nm.appendChild(el("span","dot "+(dotCls||"muted")));
+   var tx = el("div","txt"); tx.appendChild(el("div","t1", t1)); nm.appendChild(tx);
+   r.appendChild(nm);
+   var rt = el("div","rt"); rt.appendChild(el("span","chip "+(chipCls||"na"), chipTxt));
+   r.appendChild(rt); return r;
+ }
+
+ function metaRow(host, left){
+   var m = el("div","meta");
+   m.appendChild(el("span",null,left));
+   m.appendChild(el("span",null,"read "+nowLabel()));
+   return m;
+ }
+
+ // ---- GB grid --------------------------------------------------------------
+ function renderGrid(res){
+   var host = document.getElementById("grid-body");
+   host.innerHTML = "";
+   if(!res.ok || !res.data || !res.data.data || !res.data.data[0]){
+     host.appendChild(rowSimple("carbon intensity source unreachable","UNAVAILABLE","unavail","off"));
+     host.appendChild(metaRow(host,"source: carbonintensity.org.uk /intensity · UNAVAILABLE"));
+     return;
+   }
+   var row = res.data.data[0];
+   var it = row.intensity||{};
+   var actual = (it.actual==null)?null:it.actual;
+   var forecast = (it.forecast==null)?null:it.forecast;
+   var idx = it.index||null;
+   var idxColor = ({ "very low":"green","low":"green","moderate":"amber","high":"red","very high":"red" })[idx]||"amber";
+
+   var stat = el("div","stat");
+   if(actual!=null){
+     stat.appendChild(el("span","big "+(idxColor==="green"?"green":(idxColor==="red"?"red":"teal")), String(actual)));
+     stat.appendChild(el("span","unit","gCO₂/kWh (actual)"));
+   } else if(forecast!=null){
+     stat.appendChild(el("span","big teal", String(forecast)));
+     stat.appendChild(el("span","unit","gCO₂/kWh (forecast — actual UNAVAILABLE)"));
+   } else {
+     stat.appendChild(el("span","big red","—"));
+     stat.appendChild(el("span","unit","gCO₂/kWh UNAVAILABLE"));
+   }
+   host.appendChild(stat);
+
+   var rows = el("div","rows");
+   var r1 = el("div","r");
+   var n1 = el("div","nm"); n1.appendChild(el("div","txt")); n1.firstChild.appendChild(el("div","t1","index"));
+   r1.appendChild(n1);
+   var rt1 = el("div","rt"); rt1.appendChild(el("span","chip "+(idxColor==="green"?"measured":(idxColor==="red"?"unavail":"reported")), esc(idx||"UNAVAILABLE")));
+   r1.appendChild(rt1); rows.appendChild(r1);
+
+   rows.appendChild(kv("forecast", forecast!=null?forecast+" gCO₂/kWh":"UNAVAILABLE"));
+   rows.appendChild(kv("actual", actual!=null?actual+" gCO₂/kWh":"UNAVAILABLE"));
+   rows.appendChild(kv("window", esc(row.from)+" → "+esc(row.to)));
+   host.appendChild(rows);
+   host.appendChild(metaRow(host,"source: carbonintensity.org.uk /intensity · REPORTED"));
+ }
+
+ function kv(k, v){
+   var r = el("div","r");
+   var nm = el("div","nm"); var tx=el("div","txt"); tx.appendChild(el("div","t1",k)); nm.appendChild(tx);
+   r.appendChild(nm);
+   var rt = el("div","rt"); rt.appendChild(el("span","val", v));
+   r.appendChild(rt); return r;
+ }
+
+ // ---- Generation mix -------------------------------------------------------
+ function renderMix(res){
+   var host = document.getElementById("mix-body");
+   host.innerHTML = "";
+   if(!res.ok || !res.data || !res.data.data || !res.data.data.generationmix){
+     host.appendChild(rowSimple("generation mix source unreachable","UNAVAILABLE","unavail","off"));
+     host.appendChild(metaRow(host,"source: carbonintensity.org.uk /generation · UNAVAILABLE"));
+     return;
+   }
+   var mix = res.data.data.generationmix.slice().sort(function(a,b){return b.perc-a.perc;});
+   var box = el("div","mix");
+   mix.forEach(function(m){
+     var zero = (m.perc===0);
+     var row = el("div","m"+(zero?" zero":""));
+     row.appendChild(el("div","ml", esc(m.fuel)));
+     var bar = el("div","bar");
+     var fill = el("div","fill"); fill.style.width = Math.max(m.perc,0)+"%";
+     bar.appendChild(fill); row.appendChild(bar);
+     row.appendChild(el("div","mv", m.perc+"%"));
+     box.appendChild(row);
+   });
+   host.appendChild(box);
+   host.appendChild(metaRow(host,"source: carbonintensity.org.uk /generation · REPORTED"));
+ }
+
+ // ---- load -----------------------------------------------------------------
+ function loadAll(){
+   jget(A11OY).then(renderMesh);
+   jget(CI).then(renderGrid);
+   jget(GEN).then(renderMix);
+ }
+ loadAll();
+ setInterval(loadAll, 90000);
+
+ // ---- holographic lattice backdrop (vanilla 2D canvas, no CDN) -------------
+ (function(){
+   var c = document.getElementById("bg"); if(!c) return;
+   var ctx = c.getContext("2d"); if(!ctx) return;
+   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+   var W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+   function resize(){
+     W=c.clientWidth=window.innerWidth; H=c.clientHeight=window.innerHeight;
+     c.width=Math.floor(W*dpr); c.height=Math.floor(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+   }
+   resize(); window.addEventListener("resize", resize);
+   var t=0;
+   function frame(){
+     ctx.clearRect(0,0,W,H);
+     // vignette base
+     var g=ctx.createRadialGradient(W*0.5,H*0.32,0,W*0.5,H*0.32,Math.max(W,H)*0.85);
+     g.addColorStop(0,"rgba(11,22,32,0.55)"); g.addColorStop(1,"rgba(5,7,13,0)");
+     ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+     // receding perspective lattice toward a horizon
+     var hy=H*0.30, vx=W*0.5;
+     var speed = reduce?0:1;
+     t += speed;
+     ctx.lineWidth=1;
+     // horizontal receding lines
+     for(var i=0;i<26;i++){
+       var p=((i*22 + (t*0.5))%572)/572; // 0..1
+       var y=hy + Math.pow(p,2.2)*(H-hy);
+       var a=Math.max(0,(1-p))*0.16;
+       ctx.strokeStyle="rgba(58,244,200,"+a.toFixed(3)+")";
+       ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+     }
+     // vertical converging lines
+     for(var j=-14;j<=14;j++){
+       var fx=vx + j*(W/14);
+       var a2=0.10*(1-Math.abs(j)/16);
+       if(a2<=0) continue;
+       ctx.strokeStyle="rgba(91,141,238,"+a2.toFixed(3)+")";
+       ctx.beginPath(); ctx.moveTo(vx + j*22, hy); ctx.lineTo(fx, H); ctx.stroke();
+     }
+     if(!reduce) requestAnimationFrame(frame); 
+   }
+   if(reduce){ frame(); } else { requestAnimationFrame(frame); }
+ })();
+})();
+</script>
+</body>
+</html>
