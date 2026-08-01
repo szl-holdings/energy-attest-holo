@@ -3,20 +3,18 @@
 **Honest, holographic energy-attestation surface for the SZL Holdings sovereign mesh.**
 
 Static, self-contained HTML page (0 runtime CDN) that reports the estate's **energy
-attestation** posture and never fabricates a joule. When there are no live NVML meters —
-the current, honest state — it attests **UNAVAILABLE in RED**. An attestation page that goes
-RED when the meters are dead is the honesty flex, not a bug.
+attestation** posture and never fabricates a joule. Current meter state is requested at view
+time. When no fresh NVML evidence is reported, energy remains **UNAVAILABLE in RED**.
 
 - **Live Space:** https://huggingface.co/spaces/SZLHOLDINGS/energy-attest-holo
-- **Status:** ROADMAP → **LIVE** (static page live; sovereign energy meters honestly **DOWN**
-  until the sovereign boxes + Cloudflare tunnels are powered up — the "no live meters yet"
-  state is the honest launch state).
+- **Status:** the static page is published; meter availability is a separate runtime dependency
+  and is relayed as **REPORTED** from a11oy at observation time.
 
 ## What it shows
 
 | Panel | Source (keyless, client-side) | Label |
 |---|---|---|
-| Sovereign mesh energy meters | a11oy [`/govern/health`](https://szlholdings-a11oy.hf.space/api/a11oy/v1/govern/health) — per-engine `LIVE`/`DOWN`, per-meter NVML reachability (`530` → UNAVAILABLE), `engines_live/total` | **REPORTED** (a11oy self-report) + **MEASURED** (this browser's probe) |
+| Sovereign mesh energy meters | a11oy [`/govern/health`](https://szlholdings-a11oy.hf.space/api/a11oy/v1/govern/health) — per-engine `LIVE`/`DOWN`, per-meter NVML reachability, `engines_live/total` | **REPORTED** (a11oy self-report); only API transport is **MEASURED** by this browser |
 | GB grid carbon intensity | [National Grid ESO Carbon Intensity API](https://carbonintensity.org.uk) `/intensity` | **REPORTED** (grid context, not our own compute) |
 | GB generation mix | Carbon Intensity API `/generation` | **REPORTED** |
 
