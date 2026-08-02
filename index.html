@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Energy Attestation — SZL Holdings</title>
-<meta name="description" content="Honest holographic energy-attestation posture for the SZL sovereign mesh. Shows RED when there are no live NVML meters — the no-live-meters state is the honest launch state. GB grid carbon intensity is REPORTED pass-through."/>
+<meta name="description" content="Honest holographic energy-attestation posture for the SZL sovereign mesh. Meter state is relayed from a11oy as REPORTED; absent fresh NVML evidence remains UNAVAILABLE."/>
 <!-- 0 runtime CDN. No external libraries, no web fonts — system fonts only, a single
      self-contained vanilla-JS 2D canvas for the holographic lattice backdrop.
 
@@ -13,9 +13,8 @@
        REPORTED     — a pass-through of an upstream self-report (a11oy's own /govern/health,
                       the National Grid ESO Carbon Intensity API), or
        UNAVAILABLE  — the source was unreachable / the capability is honestly absent.
-     Nothing here is ever fabricated. The sovereign mesh currently reports NO live energy
-     meters (Cloudflare tunnels down, boxes off) — this page renders that truthfully in RED.
-     An attestation page that goes RED when the meters are dead is the honesty flex, not a bug.
+     Nothing here is ever fabricated. Current meter state is requested at view time and relayed
+     as REPORTED. An absent or unreachable source remains UNAVAILABLE.
      Λ = Conjecture 1 (advisory, never proven). Energy is null unless a real NVML meter reports. -->
 <style>
  :root{
@@ -25,16 +24,20 @@
    --green:#2fd07a;--red:#ff5470;--amber:#e8b34a;
  }
  *{box-sizing:border-box}
+ html{scroll-behavior:smooth;scroll-padding-top:20px}
  html,body{margin:0;height:100%}
  body{background:var(--void);color:var(--cream);
    font:14px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
    min-height:100vh;min-height:100dvh;position:relative;overflow-x:hidden}
  /* holographic lattice backdrop */
  #bg{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%}
- .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 16px 48px}
+ .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right)) max(48px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
  a{color:var(--proof);text-decoration:none}
  a:hover{text-decoration:underline}
- header{padding:20px 0 14px;border-bottom:1px solid var(--line);
+ a:focus-visible,button:focus-visible{outline:3px solid var(--proof);outline-offset:4px}
+ .skip{position:fixed;z-index:20;top:max(8px,env(safe-area-inset-top));left:max(8px,env(safe-area-inset-left));padding:10px 13px;background:var(--proof);color:var(--void);font:600 12px ui-monospace,monospace;transform:translateY(-180%);transition:transform .2s}
+ .skip:focus{transform:none}
+ header{padding:max(20px,env(safe-area-inset-top)) 0 14px;border-bottom:1px solid var(--line);
    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
  h1{font-size:19px;margin:0;letter-spacing:.4px;font-weight:650}
  h1 .glyph{color:var(--proof)}
@@ -102,6 +105,7 @@
  .stat .big.red{color:var(--red)}
  .stat .big.green{color:var(--green)}
  .stat .big.teal{color:var(--proof)}
+ .stat .big.reported{color:var(--lattice)}
  .stat .unit{color:var(--para);font-size:12px}
 
  /* generation-mix bars */
@@ -117,27 +121,33 @@
  .meta{color:var(--dim);font:10.5px ui-monospace,monospace;margin-top:12px;
    border-top:1px solid var(--line2);padding-top:9px;display:flex;
    justify-content:space-between;gap:10px;flex-wrap:wrap}
- .btn{font:11px ui-monospace,monospace;padding:5px 11px;border-radius:7px;
-   border:1px solid var(--proof);background:#08140f;color:var(--proof);cursor:pointer}
+ .btn{display:inline-flex;align-items:center;min-height:44px;font:11px ui-monospace,monospace;padding:5px 13px;border-radius:7px;border:1px solid var(--proof);background:#08140f;color:var(--proof);cursor:pointer}
  .btn:hover{background:#0c1d15}
  .loading{color:var(--dim);font:11px ui-monospace,monospace;padding:14px 2px}
 
  footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
    color:var(--para);font:10.5px/1.7 ui-monospace,monospace}
  footer .doct{color:var(--dim)}
- @media (prefers-reduced-motion:reduce){#bg{opacity:.5}}
+ .identity{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:18px}
+ .identity>div,.path{border:1px solid var(--line);border-radius:11px;background:rgba(11,18,27,.9);padding:15px}
+ .identity h2,.path h2{margin:0 0 7px;font-size:13px}
+ .identity p,.path p{margin:0;color:var(--para);font-size:12px}
+ .identity dl{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:0;font:10.5px/1.5 ui-monospace,monospace}
+ .identity dt{color:var(--dim)}.identity dd{margin:0;color:var(--cream);overflow-wrap:anywhere}
+ .paths{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+ .path a{display:inline-flex;align-items:center;min-height:44px;margin-top:8px}
+ @media(max-width:760px){.identity,.paths{grid-template-columns:1fr}.r{align-items:flex-start}.r .rt{flex-wrap:wrap;justify-content:flex-end}}
+ @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}#bg{opacity:.5}.skip{transition:none}}
 </style>
 </head>
 <body>
+<a class="skip" href="#evidence">Skip to evidence identity</a>
 <canvas id="bg" aria-hidden="true"></canvas>
 <div class="wrap">
  <header>
   <h1><span class="glyph">◇</span> Energy Attestation</h1>
   <span style="color:var(--para);font-size:12px">SZL Holdings · sovereign mesh</span>
-  <p class="sub">Honest energy-attestation posture for the governed inference mesh. There are
-   <b>no live NVML energy meters right now</b> — the mesh is powered down — so this page
-   attests <b>UNAVAILABLE in RED</b>. That is the point: an attestation surface that never fakes
-   a green joule. GB grid carbon intensity is shown as <b>REPORTED</b> context. Nothing is fabricated.</p>
+  <p class="sub">Honest energy-attestation posture for the governed inference mesh. Meter state is requested at view time and relayed as <b>REPORTED</b>. When fresh NVML evidence is absent, energy remains <b>UNAVAILABLE</b>; GB grid carbon intensity is separate REPORTED context.</p>
   <div class="badges">
    <span class="badge proof">0 runtime CDN</span>
    <span class="badge">Λ = Conjecture 1 · never green</span>
@@ -147,17 +157,27 @@
   </div>
  </header>
 
+ <section class="identity" id="evidence" aria-label="Evidence identity and provenance">
+  <div><h2>Evidence identity</h2><p>The browser measures whether it reached the source APIs. Engine and meter fields remain a11oy self-reports; grid values remain upstream reports.</p></div>
+  <div><dl>
+   <dt>mesh</dt><dd>REPORTED from a11oy /govern/health</dd>
+   <dt>grid</dt><dd>REPORTED from Carbon Intensity API</dd>
+   <dt>transport</dt><dd>MEASURED by this browser request</dd>
+   <dt>energy</dt><dd>UNAVAILABLE without fresh NVML evidence</dd>
+  </dl><button class="btn" id="refresh" type="button">Refresh observations</button></div>
+ </section>
+
  <div class="grid">
 
   <div class="card wide" id="mesh-card">
    <h2>Sovereign mesh energy meters
-    <span class="chip measured" title="MEASURED = this browser saw the real HTTP result of the meter probes">MEASURED probe</span>
+    <span class="chip measured" title="MEASURED = this browser reached the reporting API">MEASURED transport</span>
     <span class="chip reported" title="REPORTED = pass-through of a11oy's own /govern/health self-report">REPORTED mesh</span>
    </h2>
    <p class="cap">Live read of <a href="https://szlholdings-a11oy.hf.space/api/a11oy/v1/govern/health" target="_blank" rel="noopener">a11oy <code>/govern/health</code></a>.
     A meter is attesting only when its NVML endpoint is reachable AND fresh. Cloudflare tunnel
     <code>530</code> = the box is off / no connector → UNAVAILABLE, never a fabricated joule.</p>
-   <div id="mesh-body"><div class="loading">probing sovereign mesh…</div></div>
+   <div id="mesh-body" aria-live="polite"><div class="loading">probing sovereign mesh…</div></div>
   </div>
 
   <div class="card" id="grid-card">
@@ -166,7 +186,7 @@
    </h2>
    <p class="cap">Pass-through of the keyless <a href="https://carbonintensity.org.uk" target="_blank" rel="noopener">National Grid ESO Carbon Intensity API</a>.
     Grid-context only — this is the carbon cost of drawing from the GB grid, not a meter reading of our own compute.</p>
-   <div id="grid-body"><div class="loading">fetching grid carbon intensity…</div></div>
+   <div id="grid-body" aria-live="polite"><div class="loading">fetching grid carbon intensity…</div></div>
   </div>
 
   <div class="card" id="mix-card">
@@ -175,10 +195,15 @@
    </h2>
    <p class="cap">Half-hourly fuel mix behind that intensity figure. The greener this mix, the lower
     the carbon cost of any future live compute drawn from the GB grid.</p>
-   <div id="mix-body"><div class="loading">fetching generation mix…</div></div>
+   <div id="mix-body" aria-live="polite"><div class="loading">fetching generation mix…</div></div>
   </div>
 
  </div>
+
+ <section class="paths" aria-label="Investor and evaluator paths">
+  <article class="path"><h2>Investor summary</h2><p>The surface refuses to convert missing telemetry into a green sustainability claim. Absence stays visible.</p><a href="https://a11oy.net" target="_blank" rel="noopener">Inspect the evidence index →</a></article>
+  <article class="path"><h2>Developer / evaluator path</h2><p>Inspect the source JSON, distinguish browser transport from reported meter state, and require real NVML fields before citing energy.</p><a href="https://github.com/szl-holdings/szl-energy-attest" target="_blank" rel="noopener">Open the attestation source →</a></article>
+ </section>
 
  <footer>
   <div class="doct">Doctrine v11 · Λ = Conjecture 1 (advisory, never proven, trust ceiling 0.97) ·
@@ -243,8 +268,8 @@
    // verdict
    var v, vt, vs, cls;
    if(meterFresh && metersReachable>0){
-     cls="up"; vt="LIVE ENERGY METERS ATTESTING";
-     vs=metersReachable+" of "+meters.length+" NVML meters reachable & fresh — joules are MEASURED downstream.";
+     cls="up"; vt="REPORTED: FRESH ENERGY METERS";
+     vs="a11oy reports "+metersReachable+" of "+meters.length+" NVML meters reachable and fresh. This page does not probe those meters directly.";
    } else {
      cls="down"; vt="NO LIVE ENERGY METERS — ATTESTATION UNAVAILABLE";
      vs="0 of "+(meters.length||total)+" NVML meters reachable/fresh. The honest launch state: "+
@@ -257,7 +282,7 @@
 
    // engines live stat + meters fresh chip
    var stat = el("div","stat");
-   var big = el("span","big "+(live>0?"green":"red"), live+"/"+total);
+   var big = el("span","big reported", live+"/"+total);
    stat.appendChild(big);
    stat.appendChild(el("span","unit","governed engines live"));
    host.appendChild(stat);
@@ -273,7 +298,7 @@
      tx.appendChild(el("div","t2", esc(en.model)+" · tier "+esc(en.tier)+" · "+esc(en.effort)));
      nm.appendChild(tx); r.appendChild(nm);
      var rt = el("div","rt");
-     rt.appendChild(el("span","chip "+(en.live?"measured":"unavail"), en.live?"LIVE":"DOWN"));
+     rt.appendChild(el("span","chip reported", en.live?"REPORTED LIVE":"REPORTED DOWN"));
      r.appendChild(rt); rows.appendChild(r);
    });
    host.appendChild(rows);
@@ -294,7 +319,7 @@
      nm.appendChild(tx); r.appendChild(nm);
      var rt = el("div","rt");
      if(!m.reachable) rt.appendChild(el("span","val", esc(m.note||"")));
-     rt.appendChild(el("span","chip "+(m.reachable?"measured":"unavail"), m.reachable?"REACHABLE":"UNAVAILABLE"));
+     rt.appendChild(el("span","chip "+(m.reachable?"reported":"unavail"), m.reachable?"REPORTED REACHABLE":"REPORTED UNAVAILABLE"));
      r.appendChild(rt); mrows.appendChild(r);
    });
    host.appendChild(mrows);
@@ -302,12 +327,12 @@
    // GLM note if present
    if(d.glm){
      host.appendChild(el("div","cap","GLM engine: "+esc(d.glm.model_tag)+" — "+
-       (d.glm.on_metal_live?"on-metal LIVE":"on-metal DOWN")+". "+esc(d.glm.note||"")));
+       (d.glm.on_metal_live?"REPORTED on-metal LIVE":"REPORTED on-metal DOWN")+". "+esc(d.glm.note||"")));
    }
    if(d.honesty){
      host.appendChild(el("div","cap","a11oy honesty note: "+esc(d.honesty)));
    }
-   host.appendChild(metaRow(host, "source: a11oy /govern/health · REPORTED self-report + MEASURED probe"));
+   host.appendChild(metaRow(host, "source: a11oy /govern/health · REPORTED fields + MEASURED browser transport"));
  }
 
  function rowSimple(t1, chipTxt, chipCls, dotCls){
@@ -360,7 +385,7 @@
    var r1 = el("div","r");
    var n1 = el("div","nm"); n1.appendChild(el("div","txt")); n1.firstChild.appendChild(el("div","t1","index"));
    r1.appendChild(n1);
-   var rt1 = el("div","rt"); rt1.appendChild(el("span","chip "+(idxColor==="green"?"measured":(idxColor==="red"?"unavail":"reported")), esc(idx||"UNAVAILABLE")));
+   var rt1 = el("div","rt"); rt1.appendChild(el("span","chip "+(idx?"reported":"unavail"), esc(idx||"UNAVAILABLE")));
    r1.appendChild(rt1); rows.appendChild(r1);
 
    rows.appendChild(kv("forecast", forecast!=null?forecast+" gCO₂/kWh":"UNAVAILABLE"));
@@ -410,6 +435,7 @@
    jget(GEN).then(renderMix);
  }
  loadAll();
+ document.getElementById("refresh").addEventListener("click", loadAll);
  setInterval(loadAll, 90000);
 
  // ---- holographic lattice backdrop (vanilla 2D canvas, no CDN) -------------
