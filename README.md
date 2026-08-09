@@ -1,3 +1,15 @@
+---
+title: Energy Attestation Holo
+emoji: "⚡"
+colorFrom: gray
+colorTo: green
+sdk: static
+app_file: index.html
+pinned: false
+license: apache-2.0
+short_description: "Honest energy attestation: RED when meters are dead"
+---
+
 # energy-attest-holo
 
 **Honest, holographic energy-attestation surface for the SZL Holdings sovereign mesh.**

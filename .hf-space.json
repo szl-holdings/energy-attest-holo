@@ -1,0 +1,9 @@
+{
+  "schema": "szl.hf-static-space/v1",
+  "source_repository": "szl-holdings/energy-attest-holo",
+  "target": "SZLHOLDINGS/energy-attest-holo",
+  "files": ["LICENSE", "README.md", "index.html"],
+  "allowed_hf_extras": [".gitattributes"],
+  "smoke_paths": ["/", "/SPACE_PROVENANCE.json"],
+  "wait_running_seconds": 600
+}
