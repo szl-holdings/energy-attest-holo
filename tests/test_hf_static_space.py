@@ -1361,19 +1361,49 @@ class StaticSpaceContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, isolated)
 
-        artifact_steps = [
+        upload_steps = [
             step
             for job in jobs.values()
             for step in job.get("steps", [])
-            if str(step.get("uses", "")).startswith(
-                ("actions/upload-artifact@", "actions/download-artifact@")
-            )
+            if str(step.get("uses", "")).startswith("actions/upload-artifact@")
         ]
-        self.assertGreater(len(artifact_steps), 0)
-        for step in artifact_steps:
+        self.assertGreater(len(upload_steps), 0)
+        for step in upload_steps:
             artifact_name = step["with"]["name"]
             self.assertIn("${{ github.sha }}", artifact_name)
             self.assertIn("${{ github.run_attempt }}", artifact_name)
+
+        for job_name in ("authorize", "deploy", "measure"):
+            self.assertEqual(
+                jobs[job_name]["outputs"]["artifact-run-attempt"],
+                "${{ github.run_attempt }}",
+            )
+        for step, producer_attempt in (
+            (
+                deploy_steps["publisher-input"],
+                "${{ needs.authorize.outputs.artifact-run-attempt }}",
+            ),
+            (
+                measure_steps["measurement-input"],
+                "${{ needs.authorize.outputs.artifact-run-attempt }}",
+            ),
+            (
+                measure_steps["measurement-publisher-evidence"],
+                "${{ needs.deploy.outputs.artifact-run-attempt }}",
+            ),
+            (
+                attest_steps["publisher-evidence-download"],
+                "${{ needs.deploy.outputs.artifact-run-attempt }}",
+            ),
+            (
+                attest_steps["measurement-evidence-download"],
+                "${{ needs.measure.outputs.artifact-run-attempt }}",
+            ),
+        ):
+            artifact_name = step["with"]["name"]
+            self.assertIn("${{ github.sha }}", artifact_name)
+            self.assertIn(producer_attempt, artifact_name)
+            self.assertNotIn("${{ github.run_attempt }}", artifact_name)
 
         measurement_rebind = measure_steps["measurement-rebind"]
         self.assertEqual(
@@ -1403,6 +1433,35 @@ class StaticSpaceContractTests(unittest.TestCase):
         self.assertIs(outcome_step["continue-on-error"], True)
         self.assertIn("terminal_synthesizer_bootstrap", outcome_step["run"])
         self.assertIn("hf-workflow-stage-failure.json", outcome_step["run"])
+        outcome_commands = [
+            str(step.get("run", ""))
+            for step in jobs["attest"]["steps"]
+            if "scripts/hf_static_space.py workflow-outcome" in str(step.get("run", ""))
+        ]
+        self.assertEqual(len(outcome_commands), 2)
+        for command in outcome_commands:
+            for flag in (
+                "--bundle-outcome",
+                "--publisher-input-staging-outcome",
+                "--publisher-digests-outcome",
+                "--publisher-input-evidence-outcome",
+            ):
+                self.assertIn(flag, command)
+        terminal_gate = next(
+            step
+            for step in jobs["attest"]["steps"]
+            if step.get("name") == "Require terminal governed success"
+        )
+        for output_name in (
+            "bundle-outcome",
+            "publisher-input-outcome",
+            "publisher-digests-outcome",
+            "publisher-input-evidence-outcome",
+        ):
+            self.assertIn(
+                f"needs.authorize.outputs.{output_name}",
+                terminal_gate["run"],
+            )
         for step in jobs["attest"]["steps"]:
             if step.get("id") == "oidc":
                 continue
@@ -1455,6 +1514,10 @@ class StaticSpaceContractTests(unittest.TestCase):
                 MODULE, "_require_strict_mutation_timer"
             ), mock.patch.object(
                 MODULE,
+                "require_public_main_fresh",
+                side_effect=lambda *_args, **_kwargs: events.append("fresh-main"),
+            ), mock.patch.object(
+                MODULE,
                 "_run_with_wall_clock_deadline",
                 side_effect=lambda action, _deadline, _label: action(),
             ):
@@ -1471,7 +1534,7 @@ class StaticSpaceContractTests(unittest.TestCase):
             self.assertEqual(Path(api.upload_kwargs["folder_path"]), bundle)
             self.assertEqual(result["previous_hf_revision"], PARENT_SHA)
             self.assertEqual(result["hf_revision"], TARGET_SHA)
-            self.assertEqual(events, ["parent", "upload"])
+            self.assertEqual(events, ["parent", "fresh-main", "upload"])
             self.assertEqual(result["authorization"], governed_merge_evidence())
             self.assertFalse(failure_path.exists())
 
@@ -1491,6 +1554,10 @@ class StaticSpaceContractTests(unittest.TestCase):
                 sys.modules, {"huggingface_hub": fake_hub}
             ), mock.patch.object(
                 MODULE, "_require_strict_mutation_timer"
+            ), mock.patch.object(
+                MODULE,
+                "require_public_main_fresh",
+                return_value={},
             ), mock.patch.object(
                 MODULE,
                 "_run_with_wall_clock_deadline",
@@ -1572,6 +1639,10 @@ class StaticSpaceContractTests(unittest.TestCase):
                 sys.modules, {"huggingface_hub": fake_hub}
             ), mock.patch.object(
                 MODULE, "_require_strict_mutation_timer"
+            ), mock.patch.object(
+                MODULE,
+                "require_public_main_fresh",
+                return_value={},
             ), mock.patch.object(
                 MODULE,
                 "_run_with_wall_clock_deadline",
@@ -1997,6 +2068,34 @@ class StaticSpaceContractTests(unittest.TestCase):
             (
                 {"authorization_evidence_outcome": "failure"},
                 "governance_authorization_evidence",
+            ),
+            (
+                {
+                    "bundle_outcome": "failure",
+                    "publisher_input_outcome": "skipped",
+                },
+                "publisher_bundle",
+            ),
+            (
+                {
+                    "publisher_input_staging_outcome": "failure",
+                    "publisher_input_outcome": "skipped",
+                },
+                "publisher_input_staging",
+            ),
+            (
+                {
+                    "publisher_digests_outcome": "failure",
+                    "publisher_input_outcome": "skipped",
+                },
+                "publisher_input_digests",
+            ),
+            (
+                {
+                    "publisher_input_evidence_outcome": "failure",
+                    "publisher_input_outcome": "skipped",
+                },
+                "publisher_input_evidence_upload",
             ),
             ({"publisher_input_outcome": "failure"}, "publisher_input"),
             ({"publisher_environment_outcome": "failure"}, "publisher_environment"),
