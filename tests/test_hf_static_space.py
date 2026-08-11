@@ -1372,6 +1372,12 @@ class StaticSpaceContractTests(unittest.TestCase):
             artifact_name = step["with"]["name"]
             self.assertIn("${{ github.sha }}", artifact_name)
             self.assertIn("${{ github.run_attempt }}", artifact_name)
+        publisher_input_upload = next(
+            step
+            for step in upload_steps
+            if step.get("id") == "publisher-input-evidence"
+        )
+        self.assertEqual(publisher_input_upload["with"]["retention-days"], 30)
 
         for job_name in ("authorize", "deploy", "measure"):
             self.assertEqual(
@@ -2096,6 +2102,14 @@ class StaticSpaceContractTests(unittest.TestCase):
             ),
             (
                 {
+                    "publisher_input_evidence_outcome": "failure",
+                    "publisher_input_outcome": "skipped",
+                },
+                "publisher_input_evidence_upload",
+            ),
+            (
+                {
+                    "authorization_evidence_outcome": "failure",
                     "publisher_input_evidence_outcome": "failure",
                     "publisher_input_outcome": "skipped",
                 },
