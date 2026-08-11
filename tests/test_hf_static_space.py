@@ -1380,7 +1380,11 @@ class StaticSpaceContractTests(unittest.TestCase):
             )
         for step, producer_attempt in (
             (
-                deploy_steps["publisher-input"],
+                next(
+                    step
+                    for step in deploy_steps
+                    if step.get("id") == "publisher-input"
+                ),
                 "${{ needs.authorize.outputs.artifact-run-attempt }}",
             ),
             (
