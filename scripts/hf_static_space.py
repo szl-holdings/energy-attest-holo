@@ -2246,11 +2246,11 @@ def synthesize_workflow_outcome(
             break
     outcomes = {
         "governance_authorization": authorization_outcome,
-        "governance_authorization_evidence": authorization_evidence_outcome,
         "publisher_bundle": bundle_outcome,
         "publisher_input_staging": publisher_input_staging_outcome,
         "publisher_input_digests": publisher_digests_outcome,
         "publisher_input_evidence_upload": publisher_input_evidence_outcome,
+        "governance_authorization_evidence": authorization_evidence_outcome,
         "publisher_input": publisher_input_outcome,
         "publisher_executable_rebind": publisher_rebind_outcome,
         "publisher_environment": publisher_environment_outcome,
