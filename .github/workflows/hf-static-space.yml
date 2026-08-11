@@ -115,6 +115,7 @@ jobs:
       publisher-input-outcome: ${{ steps.publisher-input.outcome }}
       publisher-digests-outcome: ${{ steps.publisher-digests.outcome }}
       publisher-input-evidence-outcome: ${{ steps.publisher-input-evidence.outcome }}
+      artifact-run-attempt: ${{ github.run_attempt }}
       publisher_script_sha256: ${{ steps.publisher-digests.outputs.publisher_script_sha256 }}
       publisher_lock_sha256: ${{ steps.publisher-digests.outputs.publisher_lock_sha256 }}
       publisher_config_sha256: ${{ steps.publisher-digests.outputs.publisher_config_sha256 }}
@@ -252,6 +253,7 @@ jobs:
       publisher-freshness-outcome: ${{ steps.publisher-freshness.outcome }}
       publish-outcome: ${{ steps.publish.outcome }}
       publisher-evidence-outcome: ${{ steps.publisher-evidence.outcome }}
+      artifact-run-attempt: ${{ github.run_attempt }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -262,7 +264,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: hf-static-space-publisher-input-${{ github.sha }}-${{ github.run_attempt }}
+          name: hf-static-space-publisher-input-${{ github.sha }}-${{ needs.authorize.outputs.artifact-run-attempt }}
           path: ${{ runner.temp }}/publisher-input
       - name: Rebind five publisher inputs before interpretation or credentials
         id: publisher-rebind
@@ -426,6 +428,7 @@ jobs:
       measurement-environment-outcome: ${{ steps.measurement-environment.outcome }}
       measurement-outcome: ${{ steps.measurement.outcome }}
       measurement-evidence-outcome: ${{ steps.measurement-evidence.outcome }}
+      artifact-run-attempt: ${{ github.run_attempt }}
     steps:
       - name: Harden runner
         id: measurement-hardening
@@ -439,7 +442,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: hf-static-space-publisher-input-${{ github.sha }}-${{ github.run_attempt }}
+          name: hf-static-space-publisher-input-${{ github.sha }}-${{ needs.authorize.outputs.artifact-run-attempt }}
           path: ${{ runner.temp }}/publisher-input
       - name: Rebind five measurement inputs before interpretation or credentials
         id: measurement-rebind
@@ -479,7 +482,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: hf-static-space-publication-${{ github.sha }}-${{ github.run_attempt }}
+          name: hf-static-space-publication-${{ github.sha }}-${{ needs.deploy.outputs.artifact-run-attempt }}
           path: ${{ runner.temp }}/publication-evidence
       - name: Set up exact Python
         id: measurement-environment
@@ -582,7 +585,7 @@ jobs:
           ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
           ACTIONS_ID_TOKEN_REQUEST_URL: ""
         with:
-          name: hf-static-space-publication-${{ github.sha }}-${{ github.run_attempt }}
+          name: hf-static-space-publication-${{ github.sha }}-${{ needs.deploy.outputs.artifact-run-attempt }}
           path: ${{ runner.temp }}/publication-evidence
       - name: Download exact public measurement
         id: measurement-evidence-download
@@ -592,7 +595,7 @@ jobs:
           ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""
           ACTIONS_ID_TOKEN_REQUEST_URL: ""
         with:
-          name: hf-static-space-measurement-${{ github.sha }}-${{ github.run_attempt }}
+          name: hf-static-space-measurement-${{ github.sha }}-${{ needs.measure.outputs.artifact-run-attempt }}
           path: ${{ runner.temp }}/measurement-evidence
       - name: Attest canonical exact-revision measurement with GitHub OIDC
         id: oidc
@@ -633,6 +636,10 @@ jobs:
               --workflow-failure "$RUNNER_TEMP/terminal-evidence/hf-workflow-stage-failure.json" \
               --authorization-outcome "${{ needs.authorize.outputs.authorization-outcome }}" \
               --authorization-evidence-outcome "${{ needs.authorize.outputs.authorization-evidence-outcome }}" \
+              --bundle-outcome "${{ needs.authorize.outputs.bundle-outcome }}" \
+              --publisher-input-staging-outcome "${{ needs.authorize.outputs.publisher-input-outcome }}" \
+              --publisher-digests-outcome "${{ needs.authorize.outputs.publisher-digests-outcome }}" \
+              --publisher-input-evidence-outcome "${{ needs.authorize.outputs.publisher-input-evidence-outcome }}" \
               --publisher-input-outcome "${{ needs.deploy.outputs.publisher-input-outcome }}" \
               --publisher-rebind-outcome "${{ needs.deploy.outputs.publisher-rebind-outcome }}" \
               --publisher-environment-outcome "${{ needs.deploy.outputs.publisher-environment-outcome }}" \
@@ -710,6 +717,10 @@ jobs:
             --workflow-failure "$RUNNER_TEMP/terminal-evidence/hf-workflow-stage-failure.json" \
             --authorization-outcome "${{ needs.authorize.outputs.authorization-outcome }}" \
             --authorization-evidence-outcome "${{ needs.authorize.outputs.authorization-evidence-outcome }}" \
+            --bundle-outcome "${{ needs.authorize.outputs.bundle-outcome }}" \
+            --publisher-input-staging-outcome "${{ needs.authorize.outputs.publisher-input-outcome }}" \
+            --publisher-digests-outcome "${{ needs.authorize.outputs.publisher-digests-outcome }}" \
+            --publisher-input-evidence-outcome "${{ needs.authorize.outputs.publisher-input-evidence-outcome }}" \
             --publisher-input-outcome "${{ needs.deploy.outputs.publisher-input-outcome }}" \
             --publisher-rebind-outcome "${{ needs.deploy.outputs.publisher-rebind-outcome }}" \
             --publisher-environment-outcome "${{ needs.deploy.outputs.publisher-environment-outcome }}" \
@@ -751,6 +762,10 @@ jobs:
           set -euo pipefail
           test "${{ needs.authorize.outputs.authorization-outcome }}" = "success"
           test "${{ needs.authorize.outputs.authorization-evidence-outcome }}" = "success"
+          test "${{ needs.authorize.outputs.bundle-outcome }}" = "success"
+          test "${{ needs.authorize.outputs.publisher-input-outcome }}" = "success"
+          test "${{ needs.authorize.outputs.publisher-digests-outcome }}" = "success"
+          test "${{ needs.authorize.outputs.publisher-input-evidence-outcome }}" = "success"
           test "${{ needs.deploy.outputs.publisher-input-outcome }}" = "success"
           test "${{ needs.deploy.outputs.publisher-rebind-outcome }}" = "success"
           test "${{ needs.deploy.outputs.publisher-environment-outcome }}" = "success"
