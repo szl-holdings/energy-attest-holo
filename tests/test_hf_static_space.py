@@ -2142,6 +2142,13 @@ class StaticSpaceContractTests(unittest.TestCase):
                 "measurement_environment",
             ),
             (
+                {
+                    "measurement_environment_outcome": "failure",
+                    "publisher_evidence_download_outcome": "failure",
+                },
+                "measurement_environment",
+            ),
+            (
                 {"attestation_hardening_outcome": "failure"},
                 "attestation_hardening",
             ),
