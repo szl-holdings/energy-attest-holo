@@ -1671,6 +1671,11 @@ def deploy_bundle(
         before_sha = exact_sha(before.sha, "observed Hugging Face parent revision")
         state["previous_hf_revision"] = before_sha
         _require_strict_mutation_timer()
+        require_public_main_fresh(
+            source_sha,
+            result_path.parent / "github-main-preupload-freshness.json",
+            config_path,
+        )
         state["upload_call_entered"] = True
         upload_transport = "RETURNED_AUTHORITATIVE_REVISION"
         try:
@@ -2199,6 +2204,10 @@ def synthesize_workflow_outcome(
     *,
     authorization_outcome: str = "success",
     authorization_evidence_outcome: str = "success",
+    bundle_outcome: str = "success",
+    publisher_input_staging_outcome: str = "success",
+    publisher_digests_outcome: str = "success",
+    publisher_input_evidence_outcome: str = "success",
     publisher_input_outcome: str = "success",
     publisher_rebind_outcome: str = "success",
     publisher_environment_outcome: str = "success",
@@ -2238,6 +2247,10 @@ def synthesize_workflow_outcome(
     outcomes = {
         "governance_authorization": authorization_outcome,
         "governance_authorization_evidence": authorization_evidence_outcome,
+        "publisher_bundle": bundle_outcome,
+        "publisher_input_staging": publisher_input_staging_outcome,
+        "publisher_input_digests": publisher_digests_outcome,
+        "publisher_input_evidence_upload": publisher_input_evidence_outcome,
         "publisher_input": publisher_input_outcome,
         "publisher_executable_rebind": publisher_rebind_outcome,
         "publisher_environment": publisher_environment_outcome,
@@ -2388,6 +2401,10 @@ def main() -> int:
     outcome.add_argument("--oidc-outcome", required=True)
     outcome.add_argument("--authorization-outcome", default="success")
     outcome.add_argument("--authorization-evidence-outcome", default="success")
+    outcome.add_argument("--bundle-outcome", default="success")
+    outcome.add_argument("--publisher-input-staging-outcome", default="success")
+    outcome.add_argument("--publisher-digests-outcome", default="success")
+    outcome.add_argument("--publisher-input-evidence-outcome", default="success")
     outcome.add_argument("--publisher-input-outcome", default="success")
     outcome.add_argument("--publisher-rebind-outcome", default="success")
     outcome.add_argument("--publisher-environment-outcome", default="success")
@@ -2470,6 +2487,10 @@ def main() -> int:
             args.config,
             authorization_outcome=args.authorization_outcome,
             authorization_evidence_outcome=args.authorization_evidence_outcome,
+            bundle_outcome=args.bundle_outcome,
+            publisher_input_staging_outcome=args.publisher_input_staging_outcome,
+            publisher_digests_outcome=args.publisher_digests_outcome,
+            publisher_input_evidence_outcome=args.publisher_input_evidence_outcome,
             publisher_input_outcome=args.publisher_input_outcome,
             publisher_rebind_outcome=args.publisher_rebind_outcome,
             publisher_environment_outcome=args.publisher_environment_outcome,
