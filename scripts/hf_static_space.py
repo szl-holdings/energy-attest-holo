@@ -2242,38 +2242,44 @@ def synthesize_workflow_outcome(
             target = evidence["target"]
         if known_revision and target:
             break
-    outcomes = {
-        "governance_authorization": authorization_outcome,
-        "governance_authorization_evidence": authorization_evidence_outcome,
-        "publisher_bundle": bundle_outcome,
-        "publisher_input_staging": publisher_input_outcome,
-        "publisher_input_digest_binding": publisher_digests_outcome,
-        "publisher_input_evidence_upload": publisher_input_evidence_outcome,
-        "publisher_input_download": publisher_input_download_outcome,
-        "publisher_executable_rebind": publisher_rebind_outcome,
-        "publisher_environment": publisher_environment_outcome,
-        "publisher_freshness": publisher_freshness_outcome,
-        "publisher_mutation": publish_outcome,
-        "publisher_evidence_upload": publisher_evidence_outcome,
-        "publisher_evidence_download": publisher_evidence_download_outcome,
-        "measurement_hardening": measurement_hardening_outcome,
-        "measurement_input": measurement_input_outcome,
-        "measurement_executable_rebind": measurement_rebind_outcome,
-        "measurement_publisher_evidence_download": measurement_publisher_evidence_outcome,
-        "measurement_environment": measurement_environment_outcome,
-        "local_measurement": measurement_outcome,
-        "measurement_evidence_upload": success_evidence_outcome,
-        "measurement_evidence_download": measurement_evidence_download_outcome,
-        "attestation_hardening": attestation_hardening_outcome,
-        "attestation_checkout": attestation_checkout_outcome,
-        "attestation_environment": attestation_environment_outcome,
-        "oidc_attestation": oidc_outcome,
-    }
+    # Preserve the workflow's execution order: the first non-successful step is
+    # the authoritative failure stage when several downstream steps also fail
+    # or skip as a consequence.
+    outcomes = (
+        ("governance_authorization", authorization_outcome),
+        ("publisher_bundle", bundle_outcome),
+        ("publisher_input_staging", publisher_input_outcome),
+        ("publisher_input_digest_binding", publisher_digests_outcome),
+        ("publisher_input_evidence_upload", publisher_input_evidence_outcome),
+        ("governance_authorization_evidence", authorization_evidence_outcome),
+        ("publisher_input_download", publisher_input_download_outcome),
+        ("publisher_executable_rebind", publisher_rebind_outcome),
+        ("publisher_environment", publisher_environment_outcome),
+        ("publisher_freshness", publisher_freshness_outcome),
+        ("publisher_mutation", publish_outcome),
+        ("publisher_evidence_upload", publisher_evidence_outcome),
+        ("measurement_hardening", measurement_hardening_outcome),
+        ("measurement_input", measurement_input_outcome),
+        ("measurement_executable_rebind", measurement_rebind_outcome),
+        (
+            "measurement_publisher_evidence_download",
+            measurement_publisher_evidence_outcome,
+        ),
+        ("measurement_environment", measurement_environment_outcome),
+        ("local_measurement", measurement_outcome),
+        ("measurement_evidence_upload", success_evidence_outcome),
+        ("attestation_hardening", attestation_hardening_outcome),
+        ("attestation_checkout", attestation_checkout_outcome),
+        ("attestation_environment", attestation_environment_outcome),
+        ("publisher_evidence_download", publisher_evidence_download_outcome),
+        ("measurement_evidence_download", measurement_evidence_download_outcome),
+        ("oidc_attestation", oidc_outcome),
+    )
     observed_source = measurement.get("source") if measurement else None
     failure_stage = force_failure_stage
     if not failure_stage:
         failure_stage = next(
-            (stage for stage, outcome in outcomes.items() if outcome != "success"),
+            (stage for stage, outcome in outcomes if outcome != "success"),
             "",
         )
     if not failure_stage and (

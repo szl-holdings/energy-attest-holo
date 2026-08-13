@@ -2150,6 +2150,31 @@ class StaticSpaceContractTests(unittest.TestCase):
                     self.assertFalse(failure["deployment_success"])
                     self.assertFalse((root / "receipt.json").exists())
 
+    def test_multiple_authorize_failures_report_first_executed_step(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            failure = MODULE.synthesize_workflow_outcome(
+                SOURCE_SHA,
+                root / "missing-result.json",
+                root / "missing-measurement.json",
+                root / "missing-mutation.json",
+                root / "missing-partial.json",
+                root / "receipt.json",
+                root / "workflow-failure.json",
+                "success",
+                "success",
+                "success",
+                "success",
+                authorization_evidence_outcome="failure",
+                publisher_input_evidence_outcome="failure",
+            )
+
+            self.assertEqual(
+                failure["failure_stage"], "publisher_input_evidence_upload"
+            )
+            self.assertFalse(failure["deployment_success"])
+            self.assertFalse((root / "receipt.json").exists())
+
     def test_successful_oidc_outcome_mints_exact_measurement_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
