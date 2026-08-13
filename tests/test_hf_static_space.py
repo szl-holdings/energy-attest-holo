@@ -2437,7 +2437,9 @@ class WorkflowBoundaryTests(unittest.TestCase):
         for name, artifact_output in cases:
             with self.subTest(step=name):
                 step = steps[name]
-                self.assertEqual(step["if"], f"{artifact_output} != ''")
+                self.assertEqual(
+                    step["if"], f"always() && {artifact_output} != ''"
+                )
                 self.assertEqual(step["with"]["name"], "${{ " + artifact_output + " }}")
                 self.assertNotIn(".result", step["if"])
                 self.assertNotEqual(step["with"]["name"], "")
