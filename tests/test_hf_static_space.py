@@ -2396,6 +2396,29 @@ class WorkflowBoundaryTests(unittest.TestCase):
             },
         )
 
+    def test_publisher_input_survives_failed_job_rerun_window(self) -> None:
+        authorize_steps = {
+            step["name"]: step
+            for step in self.workflow["jobs"]["authorize"]["steps"]
+        }
+        publisher_input = authorize_steps["Upload exact publisher input"]
+        self.assertEqual(publisher_input["with"]["retention-days"], 30)
+        self.assertEqual(
+            publisher_input["with"]["name"],
+            "hf-static-space-publisher-input-${{ github.sha }}-${{ github.run_attempt }}",
+        )
+        for job_id in ("deploy", "measure"):
+            with self.subTest(job=job_id):
+                download = next(
+                    step
+                    for step in self.workflow["jobs"][job_id]["steps"]
+                    if step["name"] == "Download exact authorized publisher input"
+                )
+                self.assertEqual(
+                    download["with"]["name"],
+                    "${{ needs.authorize.outputs.publisher-input-artifact-name }}",
+                )
+
     def test_attestation_downloads_preserve_failed_producer_evidence(self) -> None:
         steps = {
             step["name"]: step
